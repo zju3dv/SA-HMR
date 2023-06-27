@@ -1,0 +1,28 @@
+# ====== Trainer ====== #
+network_wrapper:
+  target: lib.train.trainers.pose.pose_trainer.NetworkWrapper
+  params:
+    loss_weights: {}
+    dataset_name: ???
+    prox_annot: null
+    skip_spv_bi4s_seg: True  #  close this for performance
+
+# ====== Network ====== #
+network:
+  target: lib.networks.pose.net_manager.Network
+  params:
+    network_name: sahmr  # choose a network (task)
+    rcnet:
+      target: lib.networks.pose.root_contact.rc_net.RCNet
+    sahmr:
+      target: lib.networks.pose.sahmr.sahmr.SAHMR
+      params:
+        rc_cfg: {}
+        rc_ckpt: ""
+        m_cfg:
+          pred_coord: 'crm'
+          corr_pc_type: 'pcSeg' 
+          attn_type: 'linear'
+          dropout: 0.1
+          cp_mimic_bert: self_attn_linearx2
+        m_ckpt: "checkpoints/metro/metro_3dpw_state_dict.bin" # pretrained

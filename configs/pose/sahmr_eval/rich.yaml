@@ -1,0 +1,9 @@
+task: sahmr_rich
+default_cfg_path: configs/pose/default.yaml
+
+network:
+  params:
+    sahmr:
+      params:
+        rc_cfg: {'hrnet_ver_name': 'metro_wo_pretrained'}
+        m_ckpt: ""
