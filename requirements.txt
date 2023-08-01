@@ -1,4 +1,12 @@
+# PyTorch
+--extra-index-url https://download.pytorch.org/whl/cu113
+torch==1.12.1+cu113
+torchvision==0.13.1+cu113
+
+# PyTorch 3D
 pytorch3d @ https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py38_cu113_pyt1121/pytorch3d-0.7.2-cp38-cp38-linux_x86_64.whl
+
+# Other packages
 tensorboardX
 opencv-python
 numpy==1.23.5
@@ -12,3 +20,4 @@ jupyter
 chumpy
 smplx
 omegaconf
+black

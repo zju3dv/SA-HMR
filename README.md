@@ -17,7 +17,7 @@
 <details><summary>Environment</summary>
 
 ```bash
-conda env create -f environment.yaml
+conda create -y -n sahmr python=3.8
 conda activate sahmr
 pip install -r requirements.txt
 pip install -e . 
