@@ -1,12 +1,9 @@
-import torch
+from pathlib import Path
 import torch.nn as nn
-import torch.nn.functional as F
 
 from lib.networks.pose.sahmr.hrnet.config import config as hrnet_config
 from lib.networks.pose.sahmr.hrnet.config import update_config as hrnet_update_config
 from lib.networks.pose.sahmr.hrnet.hrnet_cls_net_featmaps import get_cls_net
-
-from pathlib import Path
 
 
 class HRNetWrapper(nn.Module):
@@ -17,7 +14,7 @@ class HRNetWrapper(nn.Module):
             hrnet_yaml = Path(__file__).parent / "cls_hrnet_w64_sgd_lr5e-2_wd1e-4_bs32_x100.yaml"
             hrnet_update_config(hrnet_config, hrnet_yaml)
             if ver_name == "metro_pretrained":
-                ckpt = "checkpoints/metro/metro_3dpw_state_dict.bin"
+                ckpt = "datasymlinks/checkpoints/metro/metro_3dpw_state_dict.bin"
             else:
                 ckpt = ""
             self.hrnet = get_cls_net(

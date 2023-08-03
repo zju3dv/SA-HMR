@@ -57,8 +57,7 @@ class RCNet(nn.Module):
             root_net_out = root_net_out[:B]
         else:
             root_net_out = self.root_net(imgs_net_input)
-            if self.dim_bi4s_seg != 0:
-                batch["pred_bi4s_seg_hm"] = root_net_out[:, 34:, :, :]  # (B, 7, H, W)
+            batch["pred_bi4s_seg_hm"] = root_net_out[:, 34:, :, :]  # (B, 7, H, W)
         parse_pelvis_hm_output(root_net_out[:, :2, :, :], batch)
 
         # ===== Handle intermediate results ===== #
@@ -87,7 +86,7 @@ class RCNet(nn.Module):
                 for b in range(B)
             ]
             for b in range(B):
-                if len(c_pcFst_nearby[b]) == 0:  # in case wrong wrong depth
+                if len(c_pcFst_nearby[b]) == 0:  # no nearby points, use all points
                     c_pcFst_nearby[b] = batch["c_pcFst_all"][b]
             batch["c_pcFst_nearby"] = c_pcFst_nearby
 
@@ -128,10 +127,7 @@ class RCNet(nn.Module):
         batch["pred_vox_xyz_conf"] = pred_vox_xyz_conf
         batch["pred_vox_xyz_offset"] = pred_vox_xyz_offset
         batch["pred_vox_seg"] = pred_vox_seg
-        if self.dim_voxSeg == 8:
-            batch["pred_vox_segid"] = [v.max(1)[1] for v in pred_vox_seg]
-        elif self.dim_voxSeg == 7:
-            batch["pred_vox_seg_hm"] = pred_vox_seg
+        batch["pred_vox_segid"] = [v.max(1)[1] for v in pred_vox_seg]
 
         # compute refined 3d
         batch["pred_c_pelvis_refined"] = c_root_anchors[:, [1], :]

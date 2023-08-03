@@ -3,9 +3,7 @@ import numpy as np
 import torch
 import cv2
 from torch.utils import data
-from lib.utils import logger
-
-from .rich_utils import extract_cam_xml
+from .rich_utils import get_cam2params
 
 
 class Dataset(data.Dataset):
@@ -26,7 +24,7 @@ class Dataset(data.Dataset):
 
         # pre-load
         self.metas = np.load(self.sahmr_support_test_dir / "meta/test3116.npy", allow_pickle=True)
-        self.cam2params = self._cam2params()  # cam_key -> (T_w2c, K)
+        self.cam2params = get_cam2params(self.scene_info_root)  # cam_key -> (T_w2c, K)
 
     def __len__(self):
         return len(self.metas)
@@ -56,17 +54,3 @@ class Dataset(data.Dataset):
         }
 
         return data
-
-    def _cam2params(self):
-        cam_params = {}
-        cam_xml_files = self.scene_info_root.glob("*/calibration/*.xml")
-        for cam_xml_file in cam_xml_files:
-            cam_param = extract_cam_xml(cam_xml_file)
-            T_w2c = cam_param["ext_mat"].reshape(3, 4)
-            T_w2c = torch.cat([T_w2c, torch.tensor([[0, 0, 0, 1.0]])], dim=0)  # (4, 4)
-            K = cam_param["int_mat"].reshape(3, 3)
-            cap_name = cam_xml_file.parts[-3]
-            cam_id = int(cam_xml_file.stem)
-            cam_key = f"{cap_name}_{cam_id}"
-            cam_params[cam_key] = (T_w2c, K)
-        return cam_params

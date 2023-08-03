@@ -8,10 +8,6 @@
 > Zehong Shen, Zhi Cen, Sida Peng, Qing Shuai, Hujun Bao, Xiaowei Zhou  
 > CVPR 2023
 
-### TODO List and ETA
-- [x] Inference code and weights
-- [ ] Training code (expected 2023-7-12)
-
 ## Setup
 
 <details><summary>Environment</summary>
@@ -38,23 +34,68 @@ pip install --upgrade git+https://github.com/mit-han-lab/torchsparse.git@v1.4.0
 We provide the pretrained rich and prox models for evaluation under the `release` folder.
 
 ### RICH/PROX dataset
-You need to agree and follow the [RICH dataset license](https://rich.is.tue.mpg.de/license.html) and the [PROX dataset license](https://prox.is.tue.mpg.de/license.html) to use the data.
 
-Here, we provide the minimal and pre-propcessed `RICH/sahmr_support` and `PROX/quantitative/sahmr_support` for reproducing the metrics in the paper. By downloading, you agree to the [RICH dataset license](https://rich.is.tue.mpg.de/license.html) and the [PROX dataset license](https://prox.is.tue.mpg.de/license.html).
+#### Evaluation
+1. You need to agree and follow the [RICH dataset license](https://rich.is.tue.mpg.de/license.html) and the [PROX dataset license](https://prox.is.tue.mpg.de/license.html) to use the data.
 
-If you want to train the model, you still need to submit a request to the authors from MPI and use their links for downloading the full datasets.
+2. Here, we provide the minimal and pre-propcessed `RICH/sahmr_support` and `PROX/quantitative/sahmr_support` for reproducing the metrics in the paper. By downloading, you agree to the [RICH dataset license](https://rich.is.tue.mpg.de/license.html) and the [PROX dataset license](https://prox.is.tue.mpg.de/license.html).
+
+#### Training ✨
+
+1. You need to submit a request to the authors from MPI and use their links for downloading the full datasets. 
+
+2. RICH: We use the JPG format image. We downsampled the image to **one-forth** of its original dimensions.
 
 ### Link weights and data to the project folder
+
+``` bash
+datasymlinks
+├── RICH
+│   ├── images_ds4      # see comments below
+│   │   ├── train
+│   │   └── val
+│   ├── bodies          # included in the RICH_train.zip
+│   │   ├── train
+│   │   └── val
+│   └── sahmr_support
+│       ├── scene_info  # included in the RICH.zip
+│       ├── test_split  # included in the RICH.zip
+│       ├── train_split # included in the RICH_train.zip
+│       └── val_split   # included in the RICH_train.zip
+├── PROX                # included in the PROX.zip
+└── checkpoints
+    ├── release         # included in the `release`
+    │   ├── sahmr_rich_e30.pth
+    │   └── sahmr_prox_e30.pth
+    └── metro           # see comments below
+        └── metro_3dpw_state_dict.bin 
+```
+
+- `images_ds4`: Please download the *train* and *val* datasets and downsample the images to one-forth of its original dimensions.
+- `bodies`: We provide the fitted smplh parameters for each image. We will shift to the original smplx parameters in the future.
+- `metro_3dpw_state_dict.bin`: You only need this if you want to do training. 
+    <details><summary>Download the pretrained weights of METRO</summary>
+
+    ```bash
+    mkdir -p datasymlinks/checkpoints/metro
+    # See https://github.com/microsoft/MeshTransformer/blob/main/LICENSE
+    # See https://github.com/microsoft/MeshTransformer/blob/main/scripts/download_models.sh
+    wget -nc https://datarelease.blob.core.windows.net/metro/models/metro_3dpw_state_dict.bin -O datasymlinks/checkpoints/metro/metro_3dpw_state_dict.bin
+    ```
+    </details>
+
 ```bash
 ln -s path-to-models(smpl-models) models
 
 mkdir datasymlinks
-ln -s path-to-release(weights) datasymlinks/release
+mkdir -p datasymlinks/checkpoints
+ln -s path-to-release(weights) datasymlinks/checkpoints/release
 
 # the RICH folder should contain the original RICH dataset in the training phase,
 # and the `RICH/sahmr_support` is enough for evaluation
 mkdir -p datasymlinks/RICH 
 ln -s path-to-rich-sahmr_support datasymlinks/RICH/sahmr_support
+# for the training parts, please refer to the folder structure above
 
 # the `PROX/quantitative/sahmr_support` is enough for evaluation
 mkdir -p datasymlinks/PROX/quantitative
@@ -69,12 +110,21 @@ ln -s path-to-prox-sahmr_support datasymlinks/PROX/quantitative/sahmr_support
 
 ```bash
 # RICH model
-python tools/dump_results.py -c configs/pose/sahmr_eval/rich.yaml -d datasymlinks/release/sahmr_rich_e30.pth 
+python tools/dump_results.py -c configs/pose/sahmr_eval/rich.yaml 
 python tools/eval_results.py -c configs/pose/sahmr_eval/rich.yaml
 
 # PROX model
-python tools/dump_results.py -c configs/pose/sahmr_eval/prox.yaml -d datasymlinks/release/sahmr_prox_e30.pth --data_name prox_quant
-python tools/eval_results.py -c configs/pose/sahmr_eval/prox.yaml --data_name prox_quant
+python tools/dump_results.py -c configs/pose/sahmr_eval/prox.yaml
+python tools/eval_results.py -c configs/pose/sahmr_eval/prox.yaml
+```
+</details>
+
+<details><summary>Training</summary>
+
+```bash
+# We provide a training example on RICH dataset
+python train_net.py -c configs/pose/rich/rcnet.yaml 
+python train_net.py -c configs/pose/rich/sahmr.yaml 
 ```
 </details>
 

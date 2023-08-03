@@ -1,7 +1,6 @@
 import time
 import torch
 import torch.nn.functional as F
-import pytorch3d.ops.knn as knn
 from lib.utils.geo_transform import project_p2d, apply_T_on_points, cvt_to_bi01_p2d, get_nearby_points
 
 
@@ -48,7 +47,7 @@ def get_w_pcSeg_all(trainer, batch, thr_dist=0.05, skip_hand=False):
 
 @torch.no_grad()
 def get_gt_smpl_verts_in_world(trainer, batch):
-    if trainer.cfg.dataset_name == "prox":
+    if trainer.data_name == "prox":
         if "gt_smplx_params" in batch:  # proxdfitting
             smplh_opt = {
                 "male": trainer.smplx["male"](**batch["gt_smplx_params"]).vertices,
@@ -68,12 +67,13 @@ def get_gt_smpl_verts_in_world(trainer, batch):
             gt_c_verts = trainer.smplx2smplh_def[None] @ batch["gt_c_smplx_verts"]
             gt_w_verts = apply_T_on_points(gt_c_verts, batch["T_c2w"])
 
-    elif trainer.cfg.dataset_name == "rich":
+    elif trainer.data_name == "rich":
         smplh_opt = {
             "male": trainer.smplh["male"](**batch["gt_smplh_params"]).vertices,
             "female": trainer.smplh["female"](**batch["gt_smplh_params"]).vertices,
         }
         gt_w_verts = torch.stack([smplh_opt[meta["gender"]][i] for i, meta in enumerate(batch["meta"])])
+
     return gt_w_verts
 
 
@@ -192,7 +192,7 @@ def spv_pcSeg(trainer, batch):
     vertsSeg_pids = batch["verts6890_pids"][verts6890_seg_mask]  # verts{num(Seg)}
     c_voxFst_nearby = batch["c_voxFst_nearby"]
 
-    thr_dist = trainer.contact_thr_dist  # a far-far-away version I use 0.075cm, current default 0.05
+    thr_dist = trainer.contact_thr_dist
 
     gt_vox_seg_label = [torch.zeros_like(x[:, 0]).long() for x in c_voxFst_nearby]
     for b in range(B):

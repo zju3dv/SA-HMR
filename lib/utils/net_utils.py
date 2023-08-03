@@ -8,6 +8,9 @@ from lib.utils import logger
 from pathlib import Path
 
 
+# ----- Instantiate Utils ----- #
+
+
 def instantiate(config, **kwargs):
     return get_obj_from_str(config["target"])(**config.get("params", dict()), **kwargs)
 
@@ -18,6 +21,9 @@ def get_obj_from_str(string, reload=False):
         module_imp = importlib.import_module(module)
         importlib.reload(module_imp)
     return getattr(importlib.import_module(module, package=None), cls)
+
+
+# ----- To Cuda ----- #
 
 
 def to_cuda(batch, device="cuda"):
@@ -39,41 +45,18 @@ def to_cuda(batch, device="cuda"):
     return batch
 
 
-def load_model(net, optim, scheduler, recorder, model_dir, resume=True, epoch=-1):
-    if not resume:
-        os.system("rm -rf {}".format(model_dir))
-
-    if not os.path.exists(model_dir):
-        return 0
-
-    pths = [int(pth.split(".")[0]) for pth in os.listdir(model_dir) if pth != "latest.pth"]
-    if len(pths) == 0 and "latest.pth" not in os.listdir(model_dir):
-        return 0
-    if epoch == -1:
-        if "latest.pth" in os.listdir(model_dir):
-            pth = "latest"
-        else:
-            pth = max(pths)
-    else:
-        pth = epoch
-    print("load model: {}".format(os.path.join(model_dir, "{}.pth".format(pth))))
-    pretrained_model = torch.load(os.path.join(model_dir, "{}.pth".format(pth)), "cpu")
-    net.load_state_dict(pretrained_model["network"])
-    optim.load_state_dict(pretrained_model["optim"])
-    scheduler.load_state_dict(pretrained_model["scheduler"])
-    recorder.load_state_dict(pretrained_model["recorder"])
-    return pretrained_model["epoch"] + 1
+# ----- Model IO Utils ----- #
 
 
-def save_model(net, optim, scheduler, recorder, model_dir, epoch, last=False):
-    os.system("mkdir -p {}".format(model_dir))
-    model = {
-        "network": net.state_dict(),
-        "optim": optim.state_dict(),
-        "scheduler": scheduler.state_dict(),
-        "recorder": recorder.state_dict(),
-        "epoch": epoch,
-    }
+def save_network(net, exp_dir, epoch, last=False, keep=5):
+    model_dir = Path(exp_dir) / "checkpoints"
+    model_dir.mkdir(parents=True, exist_ok=True)
+
+    # To math the format of the pretrained model    
+    net_state_dict = OrderedDict()
+    for k, v in net.net.state_dict().items():
+        net_state_dict[f'net.{k}'] = v
+    model = {"network": net_state_dict, "epoch": epoch}
     if last:
         torch.save(model, os.path.join(model_dir, "latest.pth"))
     else:
@@ -81,51 +64,7 @@ def save_model(net, optim, scheduler, recorder, model_dir, epoch, last=False):
 
     # remove previous pretrained model if the number of models is too big
     pths = [int(pth.split(".")[0]) for pth in os.listdir(model_dir) if pth != "latest.pth"]
-    if len(pths) <= 20:
-        return
-    os.system("rm {}".format(os.path.join(model_dir, "{}.pth".format(min(pths)))))
-
-
-def load_network(net, model_dir, resume=True, epoch=-1, strict=True):
-    if not resume:
-        return 0
-
-    if not os.path.exists(model_dir):
-        print(colored("pretrained model does not exist", "red"))
-        return 0
-
-    if os.path.isdir(model_dir):
-        pths = [int(pth.split(".")[0]) for pth in os.listdir(model_dir) if pth != "latest.pth"]
-        if len(pths) == 0 and "latest.pth" not in os.listdir(model_dir):
-            return 0
-        if epoch == -1:
-            if "latest.pth" in os.listdir(model_dir):
-                pth = "latest"
-            else:
-                pth = max(pths)
-        else:
-            pth = epoch
-        model_path = os.path.join(model_dir, "{}.pth".format(pth))
-    else:
-        model_path = model_dir
-
-    logger.info("load model: {}".format(model_path))
-    pretrained_model = torch.load(model_path, map_location="cpu")
-    net.load_state_dict(pretrained_model["network"], strict=True)
-    return pretrained_model["epoch"] + 1
-
-
-def save_network(net, model_dir, epoch, last=False):
-    os.system("mkdir -p {}".format(model_dir))
-    model = {"network": net.state_dict(), "epoch": epoch}
-    if last:
-        torch.save(model, os.path.join(model_dir, "latest.pth"))
-    else:
-        torch.save(model, os.path.join(model_dir, "{}.pth".format(epoch)))
-
-    # remove previous pretrained model if the number of models is too big
-    pths = [int(pth.split(".")[0]) for pth in os.listdir(model_dir) if pth != "latest.pth"]
-    if len(pths) <= 5:
+    if len(pths) <= keep:
         return
     os.system("rm {}".format(os.path.join(model_dir, "{}.pth".format(min(pths)))))
 
@@ -173,19 +112,6 @@ def pick_net_layer(net, layers):
             if k.startswith(layer):
                 net_[k] = net[k]
     return net_
-
-
-def clear_directory_for_training(record_dir, resume=False):
-    """
-    record_dir: tb_file, model_dir
-    """
-    if resume:
-        logger.info("Resume training")
-        return
-    if Path(record_dir).exists():
-        logger.warning(colored(f"remove contents of directory {record_dir}", "red"))
-        os.system(f"rm -rf {record_dir}/*")
-    os.system(f"mkdir -p {record_dir}/model")
 
 
 def initialize_weights(modules, nonlinearity="relu"):

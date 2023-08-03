@@ -1,9 +1,11 @@
+defaults:
+  network: configs/network/sahmr.yaml
+
 task: sahmr_prox
-default_cfg_path: configs/pose/default.yaml
+data_name: prox_quant
+pretrained_ckpt: datasymlinks/checkpoints/release/sahmr_prox_e30.pth
 
 network:
   params:
-    sahmr:
-      params:
-        rc_cfg: {'hrnet_ver_name': 'metro_wo_pretrained'}
-        m_ckpt: ""
+    rc_cfg: {'hrnet_ver_name': 'metro_wo_pretrained'}
+    m_ckpt: ""

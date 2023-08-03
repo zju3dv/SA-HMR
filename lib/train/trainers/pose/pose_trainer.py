@@ -16,12 +16,13 @@ from lib.train.trainers.pose.preprocess import *
 
 
 class NetworkWrapper(nn.Module):
-    def __init__(self, net: nn.Module, loss_weights, **kwargs):
+    def __init__(self, net: nn.Module, loss_weights, data_name, **kwargs):
         super().__init__()
         self.net = net  # main network
+        self.data_name = data_name
 
         # config@train
-        self.train_extra_flip = False  # when training rcnet, set to True
+        self.train_extra_flip = kwargs["train_extra_flip"]  # when training rcnet, set to True
         self.loss_weights = {k: v for k, v in loss_weights.items() if v > 0}
 
         # config@spv
@@ -32,7 +33,6 @@ class NetworkWrapper(nn.Module):
         # helper variables
         self.smpl = SMPL()
         self.mesh_sampler = mesh_sampler()
-        self.mesh_renderer = None  # we don't need this in training for now
         self.smpl_face = self.mesh_sampler.faces.numpy()
 
         init_verts, init_joints14 = self.smpl.initialize_h36m_verts_and_joints14()
@@ -50,12 +50,11 @@ class NetworkWrapper(nn.Module):
             self.register_buffer(f"pid_to_verts431_{i}", torch.where(self.verts431_pids == i)[0], False)
 
         # Scene information
-        dataset_name = kwargs["dataset_name"]
-        if dataset_name == "rich":
+        if data_name == "rich":
             self.setup_rich()
-        elif dataset_name == "prox":
+        elif data_name == "prox":
             raise NotImplementedError
-        elif dataset_name == "prox_quant":
+        elif data_name == "prox_quant":
             self.setup_prox_quant()
 
     def setup_rich(self):

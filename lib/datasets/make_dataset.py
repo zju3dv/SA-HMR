@@ -1,22 +1,17 @@
 from lib.utils import logger
-import os
-import imp
 import torch
 import torch.utils.data
 from time import time
 from torch.utils.data.dataloader import default_collate
+from lib.utils.net_utils import instantiate
 
 
 def make_dataset(cfg, split="train"):
     tic = time()
     dat_cfg = cfg.get(f"{split}_dat")
-    logger.info(f"Making {split} dataset: {dat_cfg.module}")
+    logger.info(f"Dataset {split}: {dat_cfg.target}")
 
-    # load real dataset
-    module = f"lib.datasets.{dat_cfg.module}"
-    path = module.replace(".", "/") + ".py"
-    dataset = imp.load_source(module, path).Dataset(**dat_cfg.args, cfg=cfg)
-
+    dataset = instantiate(dat_cfg)
     limit_size = dat_cfg.limit_size
     if limit_size > 0 and len(dataset) > limit_size:
         logger.warning(f"Working on subset of size {limit_size}")
@@ -27,7 +22,7 @@ def make_dataset(cfg, split="train"):
 
 
 def collate_fn_wrapper(batch):
-    keys_to_collate_as_list = ["obj_mesh", "meta"]
+    keys_to_collate_as_list = ["meta"]
     list_in_batch = {}
     for k in keys_to_collate_as_list:
         if k in batch[0]:
@@ -50,21 +45,15 @@ def make_data_sampler(dataset, shuffle, is_distributed):
 
 
 def make_data_loader(cfg, split="train"):
-    dataset = make_dataset(cfg, split)
+    dataset = make_dataset(cfg.dataset, split)
     logger.info(f"Final {split} dataset size: {len(dataset)}")
 
     datloader_cfg = cfg.get(split)
     batch_size = datloader_cfg.batch_size
     num_workers = datloader_cfg.num_workers
+    shuffle = datloader_cfg.shuffle
 
-    sampler = make_data_sampler(dataset, datloader_cfg.shuffle, cfg.distributed)
-
-    # assume 1*node with N*Gpus: evenly adjust batchsize and num_workers
-    if cfg.distributed:
-        assert batch_size % int(os.environ["WORLD_SIZE"]) == 0
-        batch_size = batch_size // int(os.environ["WORLD_SIZE"])
-        num_workers = num_workers // int(os.environ["WORLD_SIZE"])
-
+    sampler = make_data_sampler(dataset, shuffle, is_distributed=False)
     dataloader = torch.utils.data.DataLoader(
         dataset,
         batch_size=batch_size,

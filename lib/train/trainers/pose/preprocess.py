@@ -3,10 +3,11 @@ from .supervision import *
 from lib.utils.geo_transform import apply_T_on_points, unproj_bbx_to_fst
 
 
-def get_pc_in_frustum(trainer, batch):
-    """pre-defined z-near and z_far"""
+def get_pc_in_frustum(trainer, batch, z_near=0.5, z_far=12.5):
     B = batch["image"].size(0)
-    c_frustum_points = unproj_bbx_to_fst(batch["bbx_lurb"], batch["K"], 0.5, 12.5)
+
+    # Get frustum corners in the world
+    c_frustum_points = unproj_bbx_to_fst(batch["bbx_lurb"], batch["K"], z_near, z_far)
     # batch['vis_c_fst_lines'] = get_lines_of_my_frustum(c_frustum_points)  # for vis-only, 0.1ms
     batch["T_c2w"] = batch["T_w2c"].inverse()
     w_frustum_points = apply_T_on_points(c_frustum_points, batch["T_c2w"])
@@ -25,4 +26,3 @@ def get_pc_in_frustum(trainer, batch):
     c_pcFst_all = [apply_T_on_points(p[None], batch["T_w2c"][[b]])[0] for b, p in enumerate(w_pcFst_all)]
     batch["w_pcFst_all"] = w_pcFst_all
     batch["c_pcFst_all"] = c_pcFst_all
-

@@ -82,7 +82,7 @@ def load_prox_scene_sdfs():  # PROX_quant
 
 
 def main(cfg):
-    data_name = args.data_name
+    data_name = cfg.data_name
 
     # check if pred_dump exists
     out_dir = Path(f"out/pred_dump/{cfg.task}")
@@ -197,12 +197,10 @@ def main(cfg):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--cfg_file", "-c", type=str, required=True)
-    parser.add_argument("--data_name", type=str, default="rich", choices=["rich", "prox_quant"])
 
     parser.add_argument("--debug", action="store_true", default=False)
-    parser.add_argument("--is_test", action="store_true", default=True)
     parser.add_argument("opts", default=None, nargs=argparse.REMAINDER)
     args = parser.parse_args()
-    cfg = make_cfg(args, skip_mkdir=True)
+    cfg = make_cfg(args)
 
     main(cfg)

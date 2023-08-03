@@ -79,6 +79,7 @@ class METRO_enhanced(nn.Module):
         for k in self.state_dict():
             if k in pretrained_dict:
                 weight_to_load[k] = pretrained_dict[k]
+        logger.info(f"METRO-Enhanced => loading pretrained model {ckptname}")
         logger.info(
             f"METRO-Enhanced => loading {len(weight_to_load)}/{len(pretrained_dict)} params to {len(self.state_dict())}"
         )

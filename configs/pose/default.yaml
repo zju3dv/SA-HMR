@@ -1,28 +1,52 @@
-# ====== Trainer ====== #
-network_wrapper:
-  target: lib.train.trainers.pose.pose_trainer.NetworkWrapper
-  params:
-    loss_weights: {}
-    dataset_name: ???
-    prox_annot: null
-    skip_spv_bi4s_seg: True  #  close this for performance
+defaults:
+  dataset: null
+  network: ???
+
+task: ???
+data_name: ???
+
+# ====== Utils ====== #
+skip_eval: False
+eval_ep: 1
+eval_metrics: []
+save_ep: 1
+save_last: True
+log_interval: 50
+record_interval: 50
+
+pretrained_ckpt: null
+finetune_strategy: null
 
 # ====== Network ====== #
-network:
-  target: lib.networks.pose.net_manager.Network
+network_wrapper:  # provide utilities for the main network
+  target: lib.train.trainers.pose.pose_trainer.NetworkWrapper
   params:
-    network_name: sahmr  # choose a network (task)
-    rcnet:
-      target: lib.networks.pose.root_contact.rc_net.RCNet
-    sahmr:
-      target: lib.networks.pose.sahmr.sahmr.SAHMR
-      params:
-        rc_cfg: {}
-        rc_ckpt: ""
-        m_cfg:
-          pred_coord: 'crm'
-          corr_pc_type: 'pcSeg' 
-          attn_type: 'linear'
-          dropout: 0.1
-          cp_mimic_bert: self_attn_linearx2
-        m_ckpt: "checkpoints/metro/metro_3dpw_state_dict.bin" # pretrained
+    data_name: ${data_name}
+    loss_weights: {}
+    prox_annot: null
+    train_extra_flip: False
+    skip_spv_bi4s_seg: True  #  close this for performance
+
+# ====== Train/Val Loader Settings ====== #
+train:
+  epoch: 30
+  batch_size: 24
+  num_workers: 8
+  shuffle: True
+  optimizer:
+    optim: "adam"
+    lr: 0.
+    bs: ${train.batch_size}
+    canonical_lr: 1.e-4
+    canonical_bs: 32
+    weight_decay: 0.0
+    adamw_weight_decay: 0.01
+  scheduler:
+    type: 'multi_step'
+    milestones: [15] 
+    gamma: 0.5
+
+val:
+  batch_size: 64
+  num_workers: 8
+  shuffle: False

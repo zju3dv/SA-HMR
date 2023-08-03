@@ -1,7 +1,6 @@
 import time
 import datetime
 import torch
-from torch.nn.parallel import DistributedDataParallel
 import tqdm
 
 from lib.utils import logger
@@ -9,32 +8,21 @@ from lib.utils.net_utils import to_cuda
 
 
 class Trainer(object):
-    def __init__(self, network, cfg):
-        self.cfg = cfg.clone()
-        network.cuda(cfg.local_rank)
-        if cfg.distributed:
-            network = DistributedDataParallel(
-                network,
-                device_ids=[cfg.local_rank],
-                output_device=cfg.local_rank,
-                find_unused_parameters=True,
-            )
+    def __init__(self, network, log_interval=50, record_interval=50):
         self.network = network
-        self.local_rank = cfg.local_rank
+        self.network.cuda()
+        self.log_interval = log_interval
+        self.record_interval = record_interval
 
     def reduce_loss_stats(self, loss_stats):
         reduced_losses = {k: torch.mean(v) for k, v in loss_stats.items()}
         return reduced_losses
 
     def train(self, epoch, data_loader, optimizer, recorder):
-        if self.local_rank == 0:
-            logger.info(f"Training: Epoch {epoch}")
+        logger.info(f"Training: Epoch {epoch}")
         max_iter = len(data_loader)
         self.network.train()
         end = time.time()
-
-        if self.cfg.distributed:
-            data_loader.sampler.set_epoch(epoch)
 
         for iteration, batch in enumerate(data_loader):
             data_time = time.time() - end
@@ -51,9 +39,6 @@ class Trainer(object):
             torch.nn.utils.clip_grad_value_(self.network.parameters(), 0.5)
             optimizer.step()
 
-            if self.local_rank > 0:
-                continue
-
             # data recording stage: loss_stats, time, image_stats
             recorder.step += 1
             loss_stats = self.reduce_loss_stats(batch["loss_stats"])
@@ -63,31 +48,24 @@ class Trainer(object):
             recorder.batch_time.update(batch_time)
             recorder.data_time.update(data_time)
 
-            if iteration % self.cfg.log_interval == 0 or iteration == (max_iter - 1):
+            if iteration % self.log_interval == 0 or iteration == (max_iter - 1):
                 # print training state
                 eta_seconds = recorder.batch_time.global_avg * (max_iter - iteration)
                 eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
                 lr = optimizer.param_groups[0]["lr"]
                 memory = torch.cuda.max_memory_allocated() / 1024.0 / 1024.0
 
-                training_state = "  ".join(
-                    ["eta: {}", "{}", "lr: {:.6f}", "max_mem: {:.0f}"]
-                )
-                training_state = training_state.format(
-                    eta_string, str(recorder), lr, memory
-                )
+                training_state = "  ".join(["eta: {}", "{}", "lr: {:.6f}", "max_mem: {:.0f}"])
+                training_state = training_state.format(eta_string, str(recorder), lr, memory)
                 print(training_state)
 
-            if (
-                iteration % self.cfg.record_interval == 0
-            ):  # or iteration == (max_iter - 1):
+            if iteration % self.record_interval == 0:  # or iteration == (max_iter - 1):
                 # record loss_stats and image_dict
                 recorder.record("train")
 
     @torch.no_grad()
     def val(self, epoch, data_loader, evaluator=None, recorder=None):
-        if self.cfg.local_rank == 0:
-            logger.info(f"Validation / Testing: Epoch {epoch}")
+        logger.info(f"Validation / Testing: Epoch {epoch}")
         self.network.eval()
         torch.cuda.empty_cache()
         val_loss_stats = {}
@@ -120,8 +98,7 @@ class Trainer(object):
     @torch.no_grad()
     def test(self, epoch, data_loader, evaluator=None):
         """Compared to val, the supervision is unknown so that loss cannot be computed"""
-        if self.cfg.local_rank == 0:
-            logger.info(f"Validation / Testing: Epoch {epoch}")
+        logger.info(f"Validation / Testing: Epoch {epoch}")
         self.network.eval()
         torch.cuda.empty_cache()
         data_size = len(data_loader)

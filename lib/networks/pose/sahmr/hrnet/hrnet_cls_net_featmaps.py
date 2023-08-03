@@ -450,7 +450,10 @@ class HighResolutionNet(nn.Module):
             elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
-        if os.path.isfile(pretrained):
+        if pretrained == "":
+            return
+        else:
+            assert os.path.isfile(pretrained), f"no pretrained found at '{pretrained}'"
             pretrained_dict = torch.load(pretrained, map_location="cpu")
             logger.info("HRNet => loading pretrained model {}".format(pretrained))
             if "network" in pretrained_dict:

@@ -1,0 +1,27 @@
+defaults:
+  dataset: configs/dataset/rich.yaml
+  network: configs/network/sahmr.yaml
+
+task: sahmr
+data_name: rich
+finetune_strategy: metro_enhanced_only
+
+network_wrapper:
+  params:
+    loss_weights: 
+      vertex: 1.
+      joint: 1.
+      corr_points: 1.
+      vertex_c: 1.
+
+network:
+  params:
+    rc_ckpt: "out/rich/rcnet/checkpoints/30.pth"
+
+
+eval_metrics:
+  - VoxSeg
+  - PelvisE
+  - MPJPE
+  - G_MPJPE
+  - C_HSCP_L2

@@ -1,0 +1,29 @@
+defaults:
+  dataset: configs/dataset/rich.yaml
+  network: configs/network/rcnet.yaml
+
+task: rcnet
+data_name: rich
+
+network_wrapper:
+  params:
+    train_extra_flip: True  # When training RCNet, set to True
+    skip_spv_bi4s_seg: False
+    loss_weights: 
+      pelvis_hm: 1.
+      pelvis_depth: 10.
+      pcSeg_voxel: 1.
+      vox_xyz_offset: 1.
+      pelvis_xyz_refined: 1.
+      bi4s_seg_hm: 1.  # aux-2dseg-loss
+      bi4s_seg_hm_flip: 1.  # aux-2dseg-loss
+
+train:
+  optimizer:
+    canonical_lr: 5.e-4
+
+eval_metrics:
+  - VoxSeg
+  - PelvisE_2D
+  - PelvisE
+  - HmSeg  # aux-task

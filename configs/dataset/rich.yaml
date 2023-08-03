@@ -1,0 +1,19 @@
+train_dat:
+  target: lib.datasets.rich.rich_pose.Dataset
+  limit_size: -1  # 15->15360
+  params:
+    split: "train"
+    rich_root: "datasymlinks/RICH"
+    sample_interval: 15
+    bbx_center: 10.
+    bbx_zoom: 0.4
+
+val_dat:
+  target: lib.datasets.rich.rich_pose.Dataset
+  limit_size: -1  # 30->3823
+  params:
+    split: "val"
+    rich_root: "datasymlinks/RICH"
+    sample_interval: 30
+    bbx_center: 0.
+    bbx_zoom: 0.
